@@ -178,19 +178,12 @@ htmlcov/
 # MongoDB data
 data/db/
 
-# Custom ignores
-config.py
-
 # Sanic config and temp files
-config.yaml
+
 sanic.log
 *.pid
 *.lock
 
-# Docker
-*.env
-Dockerfile
-docker-compose.yml
 
 # Miscellaneous
 .vscode/
