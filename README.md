@@ -13,7 +13,7 @@
 1. Клонируйте репозиторий:
 
    ```bash
-   git clone https://github.com/yourusername/service-api.git
+   git clone https://github.com/AlexYrlv/service-api.git
    cd service-api
 
 2. Запустите контейнеры
