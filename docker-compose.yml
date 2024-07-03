@@ -25,5 +25,3 @@ volumes:
   mongo_data:
 
 
-#mongo: Контейнер MongoDB для хранения данных.
-#service_api: Контейнер вашего приложения Sanic.

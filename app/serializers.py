@@ -3,8 +3,7 @@ from datetime import datetime
 from typing import Optional
 from bson import ObjectId
 
-# ServiceSerializer используется для преобразования объектов Python в JSON и обратно,
-# обеспечивая правильное форматирование дат и идентификаторов.
+
 class ServiceSerializer(BaseModel):
     id: Optional[str] = None
     name: str
@@ -27,5 +26,3 @@ class ServiceSerializer(BaseModel):
         if "timestamp_end" in data and data["timestamp_end"]:
             data["timestamp_end"] = data["timestamp_end"].isoformat()
         return data
-# Этот файл отвечает за сериализацию и десериализацию данных.
-# Он помогает преобразовать объекты Python в JSON и наоборот.
