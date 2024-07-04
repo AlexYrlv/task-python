@@ -3,7 +3,6 @@ from datetime import datetime
 from typing import Optional
 from bson import ObjectId
 
-
 class ServiceSerializer(BaseModel):
     id: Optional[str] = None
     name: str
@@ -13,16 +12,16 @@ class ServiceSerializer(BaseModel):
     timestamp_end: Optional[datetime] = None
 
     class Config:
-        from_attributes = True
         json_encoders = {
             datetime: lambda v: v.isoformat(),
             ObjectId: lambda v: str(v)
         }
 
-    def dict(self, **kwargs):
-        data = super().dict(**kwargs)
-        if "timestamp" in data and data["timestamp"]:
-            data["timestamp"] = data["timestamp"].isoformat()
-        if "timestamp_end" in data and data["timestamp_end"]:
-            data["timestamp_end"] = data["timestamp_end"].isoformat()
+    def to_mongo_dict(self) -> dict:
+        """
+        Преобразование объекта в словарь для MongoDB.
+        """
+        data = self.dict(exclude_none=True)
+        if 'id' in data:
+            data['_id'] = ObjectId(data.pop('id'))
         return data
