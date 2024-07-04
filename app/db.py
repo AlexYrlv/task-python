@@ -1,7 +1,6 @@
-from mongoengine import connect
-import os
+from motor.motor_asyncio import AsyncIOMotorClient
 
-def init_db():
-    db_name = os.getenv("DATABASE_NAME", "service_db")
-    db_host = os.getenv("MONGODB_URL", "mongodb://localhost:27017/service_db")
-    connect(db=db_name, host=db_host)
+def initialize_db(app):
+    client = AsyncIOMotorClient(app.config.MONGODB_URL, serverSelectionTimeoutMS=50000, socketTimeoutMS=50000)
+    app.ctx.db = client[app.config.DATABASE_NAME]
+    app.ctx.collection = app.ctx.db[app.config.COLLECTION_NAME]
