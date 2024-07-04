@@ -67,7 +67,7 @@ class ServiceRoutes:
             return response.json({"error": str(e)}, status=404)
         except Exception as e:
             logger.exception(f"Failed to fetch service history for {name}")
-            raise ServerError(f"Failed to fetch service history for {name}")
+            raise ServerError("Failed to fetch service history for {name}")
 
     @bp.get("/services")
     @openapi.summary("Get all services")
@@ -77,7 +77,7 @@ class ServiceRoutes:
         try:
             services = Service.get_all()
             return response.json({"services": [service.to_dict() for service in services]})
-        except Exception as e:
+        except Exception:
             logger.exception("Failed to fetch services")
             raise ServerError("Failed to fetch services")
 
@@ -91,9 +91,6 @@ class ServiceRoutes:
         try:
             result = Service.calculate_sla(name, interval)
             return response.json(result)
-        except NotFound as e:
-            logger.error(f"Service not found: {name}")
-            return response.json({"error": str(e)}, status=404)
         except Exception as e:
             logger.exception(f"Failed to calculate SLA for {name}")
             raise ServerError(f"Failed to calculate SLA for {name}")
