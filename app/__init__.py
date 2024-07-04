@@ -4,9 +4,9 @@ import os
 from app.routes import ServiceRoutes
 from app.db import init_db
 
+
 app = Sanic("ServiceAPI")
 
-# Настройка Sanic Extensions и OpenAPI с использованием Swagger UI
 Extend(app, openapi_config={
     "title": "Service API",
     "version": "1.0.0",
@@ -22,3 +22,5 @@ init_db(app.config.MONGODB_URL, app.config.DATABASE_NAME)
 
 # Регистрация маршрутов
 ServiceRoutes.register_routes(app)
+
+

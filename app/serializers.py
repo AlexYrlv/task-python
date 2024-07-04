@@ -3,6 +3,7 @@ from datetime import datetime
 from typing import Optional
 from bson import ObjectId
 
+
 class ServiceSerializer(BaseModel):
     id: Optional[str] = None
     name: str
@@ -18,9 +19,6 @@ class ServiceSerializer(BaseModel):
         }
 
     def to_mongo_dict(self) -> dict:
-        """
-        Преобразование объекта в словарь для MongoDB.
-        """
         data = self.dict(exclude_none=True)
         if 'id' in data:
             data['_id'] = ObjectId(data.pop('id'))

@@ -1,5 +1,3 @@
-# app/exceptions.py
-
 from sanic.exceptions import SanicException
 from sanic import response
 

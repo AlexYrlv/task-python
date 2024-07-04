@@ -1,11 +1,13 @@
 from __future__ import annotations
 from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any, TYPE_CHECKING, Tuple
-from mongoengine import Document, StringField, DateTimeField, ObjectIdField, EmbeddedDocument, EmbeddedDocumentField, ListField
+from mongoengine import Document, StringField, DateTimeField, ObjectIdField, EmbeddedDocument, EmbeddedDocumentField, \
+    ListField
 from .exceptions import NotFound, ServerError
 from bson import ObjectId
 
 VALID_STATES = ["работает", "не работает"]
+
 
 class StateHistory(EmbeddedDocument):
     state = StringField(required=True, choices=VALID_STATES)
@@ -18,6 +20,7 @@ class StateHistory(EmbeddedDocument):
             "timestamp": self.timestamp.isoformat() if self.timestamp else None,
             "timestamp_end": self.timestamp_end.isoformat() if self.timestamp_end else None,
         }
+
 
 class Service(Document):
     id = ObjectIdField(primary_key=True, default=lambda: ObjectId())
@@ -71,14 +74,11 @@ class Service(Document):
         if existing_service.state == new_state:
             raise ValueError(f"Service {existing_service.name} is already in state {new_state}")
 
-        # Закрываем текущую запись в истории
         if existing_service.history:
             existing_service.history[-1].timestamp_end = datetime.utcnow()
 
-        # Добавляем новую запись в историю
         existing_service.history.append(StateHistory(state=new_state, timestamp=datetime.utcnow()))
 
-        # Обновляем текущее состояние сервиса
         existing_service.state = new_state
         existing_service.description = description
         existing_service.timestamp = datetime.utcnow()
@@ -105,12 +105,12 @@ class Service(Document):
 
             uptime = total_time - downtime
             sla = (uptime / total_time) * 100
-
-            return {"sla": round(sla, 3), "downtime": round(downtime / 3600, 3)}
         except NotFound as e:
             raise NotFound(f"No service found with name {name}")
         except Exception as e:
             raise ServerError("Failed to calculate SLA")
+
+        return {"sla": round(sla, 3), "downtime": round(downtime / 3600, 3)}
 
     @staticmethod
     def parse_interval(interval: str) -> int:
