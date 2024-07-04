@@ -27,5 +27,5 @@
 3. После запуска можно проверить запросы по ссылке
 
    ```bash
-   http://localhost:8000/docs/swagger.
+   http://localhost:8000/docs/swagger
    ```
