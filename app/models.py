@@ -46,7 +46,7 @@ class Service:
         }
 
     @classmethod
-    def from_dict(cls, data: dict) -> "Service":
+    def from_dict(cls, data: dict) -> Service:
         """
         Создание объекта сервиса из словаря.
         """
@@ -61,7 +61,7 @@ class Service:
         )
 
     @classmethod
-    async def get_all(cls, collection: AsyncIOMotorCollection) -> List["Service"]:
+    async def get_all(cls, collection: AsyncIOMotorCollection) -> List[Service]:
         """
         Получение всех сервисов из коллекции.
         """
@@ -71,7 +71,7 @@ class Service:
         return services
 
     @classmethod
-    async def create_or_update(cls, collection: AsyncIOMotorCollection, data: Dict[str, Any]) -> "Service":
+    async def create_or_update(cls, collection: AsyncIOMotorCollection, data: Dict[str, Any]) -> Service:
         """
         Создание нового или обновление существующего сервиса.
         """
@@ -91,7 +91,7 @@ class Service:
             return await cls.create_new_service(collection, data)
 
     @classmethod
-    async def create_new_service(cls, collection: AsyncIOMotorCollection, data: Dict[str, Any]) -> "Service":
+    async def create_new_service(cls, collection: AsyncIOMotorCollection, data: Dict[str, Any]) -> Service:
         """
         Создание нового сервиса.
         """
@@ -101,7 +101,7 @@ class Service:
         return service
 
     @classmethod
-    async def update_service_state(cls, collection: AsyncIOMotorCollection, existing_service: dict, new_state: str, description: Optional[str]) -> "Service":
+    async def update_service_state(cls, collection: AsyncIOMotorCollection, existing_service: dict, new_state: str, description: Optional[str]) -> Service:
         """
         Обновление состояния существующего сервиса.
         """
@@ -130,7 +130,7 @@ class Service:
         return result.modified_count
 
     @classmethod
-    async def get_history(cls, collection: AsyncIOMotorCollection, name: str) -> List["Service"]:
+    async def get_history(cls, collection: AsyncIOMotorCollection, name: str) -> List[Service]:
         """
         Получение истории изменения состояния сервиса.
         """
@@ -198,7 +198,7 @@ class Service:
         return downtime
 
     @staticmethod
-    def get_service_times(service: dict, start_time: datetime, end_time: datetime) -> (datetime, datetime):
+    def get_service_times(service: dict, start_time: datetime, end_time: datetime) -> tuple[datetime, datetime]:
         """
         Получение временных меток начала и конца для сервиса.
         """
