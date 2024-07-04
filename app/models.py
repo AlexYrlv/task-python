@@ -1,27 +1,20 @@
-# app/models.py
-from __future__ import annotations
-from datetime import datetime, timedelta
-from typing import Optional, List, Dict, Any
-from motor.motor_asyncio import AsyncIOMotorCollection
-from bson import ObjectId
-
-from .exceptions import NotFound, ServerError  # Изменен импорт
+from datetime import datetime
+from mongoengine import Document, StringField, DateTimeField, ObjectIdField
+from .exceptions import NotFound, ServerError
 
 VALID_STATES = ["работает", "не работает"]
 
-class Service:
+
+class Service(Document):
     """
     Класс, представляющий сервис с его состоянием и временными метками.
     """
-
-    def __init__(self, name: str, state: str, id: Optional[str] = None, description: Optional[str] = None,
-                 timestamp: Optional[datetime] = None, timestamp_end: Optional[datetime] = None):
-        self.id = id or str(ObjectId())
-        self.name = name
-        self.state = self.validate_state(state)
-        self.description = description
-        self.timestamp = timestamp or datetime.utcnow()
-        self.timestamp_end = timestamp_end
+    id = ObjectIdField(primary_key=True, default=None)
+    name = StringField(required=True)
+    state = StringField(required=True, choices=VALID_STATES)
+    description = StringField()
+    timestamp = DateTimeField(default=datetime.utcnow)
+    timestamp_end = DateTimeField()
 
     @staticmethod
     def validate_state(state: str) -> str:
@@ -37,7 +30,7 @@ class Service:
         Преобразование объекта сервиса в словарь.
         """
         return {
-            "_id": self.id,
+            "id": str(self.id),
             "name": self.name,
             "state": self.state,
             "description": self.description,
@@ -46,32 +39,30 @@ class Service:
         }
 
     @classmethod
-    def from_dict(cls, data: dict) -> Service:
+    def from_dict(cls, data: dict) -> "Service":
         """
         Создание объекта сервиса из словаря.
         """
         return cls(
-            id=str(data.get("_id")),
+            id=data.get("id"),
             name=data["name"],
             state=data["state"],
             description=data.get("description"),
-            timestamp=datetime.fromisoformat(data["timestamp"]) if isinstance(data["timestamp"], str) else data["timestamp"],
+            timestamp=datetime.fromisoformat(data["timestamp"]) if isinstance(data["timestamp"], str) else data[
+                "timestamp"],
             timestamp_end=datetime.fromisoformat(data["timestamp_end"]) if data.get("timestamp_end") and isinstance(
                 data["timestamp_end"], str) else data["timestamp_end"]
         )
 
     @classmethod
-    async def get_all(cls, collection: AsyncIOMotorCollection) -> List[Service]:
+    def get_all(cls) -> List["Service"]:
         """
         Получение всех сервисов из коллекции.
         """
-        services = []
-        async for document in collection.find():
-            services.append(cls.from_dict(document))
-        return services
+        return list(cls.objects)
 
     @classmethod
-    async def create_or_update(cls, collection: AsyncIOMotorCollection, data: Dict[str, Any]) -> Service:
+    def create_or_update(cls, data: Dict[str, Any]) -> "Service":
         """
         Создание нового или обновление существующего сервиса.
         """
@@ -82,67 +73,48 @@ class Service:
         if not name or not new_state:
             raise ValueError("Name and state are required")
 
-        await cls.update_end_timestamp(collection, name)
-        existing_service = await collection.find_one({"name": name, "timestamp_end": None})
+        existing_service = cls.objects(name=name, timestamp_end=None).first()
 
         if existing_service:
-            return await cls.update_service_state(collection, existing_service, new_state, description)
+            return cls.update_service_state(existing_service, new_state, description)
         else:
-            return await cls.create_new_service(collection, data)
+            return cls.create_new_service(data)
 
     @classmethod
-    async def create_new_service(cls, collection: AsyncIOMotorCollection, data: Dict[str, Any]) -> Service:
+    def create_new_service(cls, data: Dict[str, Any]) -> "Service":
         """
         Создание нового сервиса.
         """
         service = cls(**data)
-        result = await collection.insert_one(service.to_dict())
-        service.id = str(result.inserted_id)
+        service.save()
         return service
 
     @classmethod
-    async def update_service_state(cls, collection: AsyncIOMotorCollection, existing_service: dict, new_state: str, description: Optional[str]) -> Service:
+    def update_service_state(cls, existing_service: Document, new_state: str, description: Optional[str]) -> "Service":
         """
         Обновление состояния существующего сервиса.
         """
-        if existing_service["state"] == new_state:
-            raise ValueError(f"Service {existing_service['name']} is already in state {new_state}")
+        if existing_service.state == new_state:
+            raise ValueError(f"Service {existing_service.name} is already in state {new_state}")
 
-        await collection.update_one(
-            {"_id": existing_service["_id"]},
-            {"$set": {"timestamp_end": datetime.utcnow()}}
-        )
+        existing_service.update(set__timestamp_end=datetime.utcnow())
 
-        service = cls(name=existing_service["name"], state=new_state, description=description)
-        result = await collection.insert_one(service.to_dict())
-        service.id = str(result.inserted_id)
+        service = cls(name=existing_service.name, state=new_state, description=description)
+        service.save()
         return service
 
     @classmethod
-    async def update_end_timestamp(cls, collection: AsyncIOMotorCollection, name: str) -> int:
-        """
-        Обновление временной метки завершения для всех записей сервиса с незавершенным состоянием.
-        """
-        result = await collection.update_many(
-            {"name": name, "timestamp_end": None},
-            {"$set": {"timestamp_end": datetime.utcnow()}}
-        )
-        return result.modified_count
-
-    @classmethod
-    async def get_history(cls, collection: AsyncIOMotorCollection, name: str) -> List[Service]:
+    def get_history(cls, name: str) -> List["Service"]:
         """
         Получение истории изменения состояния сервиса.
         """
-        services = []
-        async for document in collection.find({"name": name}):
-            services.append(cls.from_dict(document))
+        services = list(cls.objects(name=name))
         if not services:
             raise NotFound(f"No service found with name {name}")
         return services
 
     @classmethod
-    async def calculate_sla(cls, collection: AsyncIOMotorCollection, name: str, interval: str) -> Dict[str, Any]:
+    def calculate_sla(cls, name: str, interval: str) -> Dict[str, Any]:
         """
         Расчет SLA (Service Level Agreement) для сервиса за указанный интервал времени.
         """
@@ -152,14 +124,14 @@ class Service:
             start_time = end_time - timedelta(seconds=interval_seconds)
 
             total_time = interval_seconds
-            downtime = await cls.calculate_downtime(collection, name, start_time, end_time)
+            downtime = cls.calculate_downtime(name, start_time, end_time)
 
             uptime = total_time - downtime
             sla = (uptime / total_time) * 100
 
             return {"sla": round(sla, 3), "downtime": round(downtime / 3600, 3)}
         except NotFound as e:
-            raise e
+            raise NotFound(f"No service found with name {name}")
         except Exception as e:
             raise ServerError("Failed to calculate SLA")
 
@@ -176,38 +148,32 @@ class Service:
             raise ValueError('Invalid interval format. Use "h" for hours or "d" for days.')
 
     @classmethod
-    async def calculate_downtime(cls, collection: AsyncIOMotorCollection, name: str, start_time: datetime, end_time: datetime) -> int:
+    def calculate_downtime(cls, name: str, start_time: datetime, end_time: datetime) -> int:
         """
         Расчет времени простоя сервиса.
         """
-        service_exists = await collection.find_one({"name": name})
+        service_exists = cls.objects(name=name).first()
         if not service_exists:
             raise NotFound(f"No service found with name {name}")
 
-        service_entries = await collection.find({"name": name, "$or": [
-            {"timestamp": {"$gte": start_time, "$lt": end_time}},
-            {"timestamp_end": {"$gte": start_time, "$lt": end_time}}
-        ]}).sort("timestamp").to_list(length=None)
+        service_entries = cls.objects(name=name, timestamp__gte=start_time, timestamp__lt=end_time) | \
+                          cls.objects(name=name, timestamp_end__gte=start_time, timestamp_end__lt=end_time)
 
         downtime = 0
         for service in service_entries:
             service_start_time, service_end_time = cls.get_service_times(service, start_time, end_time)
-            if service["state"] != "работает":
+            if service.state != "работает":
                 downtime += (service_end_time - service_start_time).total_seconds()
 
         return downtime
 
     @staticmethod
-    def get_service_times(service: dict, start_time: datetime, end_time: datetime) -> tuple[datetime, datetime]:
+    def get_service_times(service: Document, start_time: datetime, end_time: datetime) -> (datetime, datetime):
         """
         Получение временных меток начала и конца для сервиса.
         """
-        service_end_time = service.get("timestamp_end", end_time)
-        if isinstance(service_end_time, str):
-            service_end_time = datetime.fromisoformat(service_end_time)
-        service_start_time = service["timestamp"]
-        if isinstance(service_start_time, str):
-            service_start_time = datetime.fromisoformat(service_start_time)
+        service_end_time = service.timestamp_end or end_time
+        service_start_time = service.timestamp
 
         if service_start_time < start_time:
             service_start_time = start_time

@@ -1,5 +1,3 @@
-# app/routes.py
-
 from sanic import Blueprint, response
 from sanic.request import Request
 from .exceptions import NotFound, ServerError
@@ -22,7 +20,7 @@ class ServiceRoutes:
             data = request.json
             logger.info(f"Received data: {data}")
 
-            service = await Service.create_or_update(request.app.ctx.collection, data)
+            service = Service.create_or_update(data)
             return response.json(service.to_dict(), status=201)
 
         except ValueError as e:
@@ -43,7 +41,7 @@ class ServiceRoutes:
             data["name"] = name
             logger.info(f"Received data for update: {data}")
 
-            service = await Service.create_or_update(request.app.ctx.collection, data)
+            service = Service.create_or_update(data)
             return response.json(service.to_dict(), status=200)
 
         except ValueError as e:
@@ -62,14 +60,14 @@ class ServiceRoutes:
     @openapi.response(200, {"application/json": {"history": list}})
     async def get_service_history(request: Request, name: str):
         try:
-            services = await Service.get_history(request.app.ctx.collection, name)
+            services = Service.get_history(name)
             return response.json({"history": [service.to_dict() for service in services]})
         except NotFound as e:
             logger.error(f"Service not found: {name}")
             return response.json({"error": str(e)}, status=404)
         except Exception as e:
             logger.exception(f"Failed to fetch service history for {name}")
-            raise ServerError("Failed to fetch service history for {name}")
+            raise ServerError(f"Failed to fetch service history for {name}")
 
     @bp.get("/services")
     @openapi.summary("Get all services")
@@ -77,9 +75,9 @@ class ServiceRoutes:
     @openapi.response(200, {"application/json": {"services": list}})
     async def get_services(request: Request):
         try:
-            services = await Service.get_all(request.app.ctx.collection)
+            services = Service.get_all()
             return response.json({"services": [service.to_dict() for service in services]})
-        except Exception:
+        except Exception as e:
             logger.exception("Failed to fetch services")
             raise ServerError("Failed to fetch services")
 
@@ -91,13 +89,15 @@ class ServiceRoutes:
     async def get_service_sla(request: Request, name: str):
         interval = request.args.get("interval")
         try:
-            result = await Service.calculate_sla(request.app.ctx.collection, name, interval)
+            result = Service.calculate_sla(name, interval)
             return response.json(result)
+        except NotFound as e:
+            logger.error(f"Service not found: {name}")
+            return response.json({"error": str(e)}, status=404)
         except Exception as e:
             logger.exception(f"Failed to calculate SLA for {name}")
             raise ServerError(f"Failed to calculate SLA for {name}")
 
     @staticmethod
-    def register_routes(app, collection):
+    def register_routes(app):
         app.blueprint(bp)
-        app.ctx.collection = collection

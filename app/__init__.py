@@ -1,10 +1,6 @@
-# app/__init__.py
-
 from sanic import Sanic
 from sanic_ext import Extend
-from .db import initialize_db
-from .routes import ServiceRoutes
-import os
+from .db import init_db
 
 app = Sanic("ServiceAPI")
 
@@ -15,10 +11,8 @@ Extend(app, openapi_config={
     "description": "API для управления сервисами",
 })
 
-# Абсолютный путь к файлу config.py
-config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../config.py')
-app.config.update_config(config_path)
+init_db()
 
-initialize_db(app)
+from .routes import ServiceRoutes
 
-ServiceRoutes.register_routes(app, app.ctx.collection)
+ServiceRoutes.register_routes(app)
