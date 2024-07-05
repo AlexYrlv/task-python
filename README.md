@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Service API
 
 Этот проект предоставляет API для управления и мониторинга состояния различных сервисов. API позволяет:
@@ -16,6 +15,7 @@
    ```bash
    git clone https://github.com/AlexYrlv/service-api.git
    cd service-api
+   ```
 
 2. Запустите контейнеры
 
