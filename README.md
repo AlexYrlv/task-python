@@ -14,7 +14,7 @@
 
    ```bash
    git clone https://github.com/AlexYrlv/task-python.git
-   cd service-api
+   cd serviceс-api
    ```
 
 2. Запустите контейнеры
